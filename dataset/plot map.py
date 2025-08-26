@@ -30,10 +30,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load the street network
-G = ox.load_graphml("chicago_street_network.graphml")
+G = ox.load_graphml("../chicago_street_network.graphml")
 
 # Load delivery points
-df = pd.read_csv("delivery_points.csv")
+df = pd.read_csv("../delivery_points.csv")
 
 # Convert graph to GeoDataFrames
 nodes, edges = ox.graph_to_gdfs(G)

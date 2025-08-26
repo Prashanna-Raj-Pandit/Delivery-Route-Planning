@@ -5,7 +5,7 @@ import pandas as pd
 import osmnx as ox
 
 # Load graph
-G = ox.load_graphml("chicago_street_network.graphml")
+G = ox.load_graphml("../chicago_street_network.graphml")
 
 # Pick 1000 random nodes as delivery points
 delivery_nodes = random.sample(list(G.nodes()), 1000)

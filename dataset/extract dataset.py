@@ -6,7 +6,7 @@ import osmnx as ox
 G = ox.graph_from_place("Chicago, Illinois, USA", network_type="drive")
 
 # Save to file if you want
-ox.save_graphml(G, "chicago_street_network.graphml")
+ox.save_graphml(G, "../chicago_street_network.graphml")
 
 
 # Convert to GeoDataFrames (nodes and edges)
