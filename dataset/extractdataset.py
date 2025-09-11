@@ -19,10 +19,3 @@ edges.to_csv("chicago_edges.csv")
 print(" - chicago_nodes.csv")
 print(" - chicago_edges.csv")
 
-# Display first few rows
-print("\nNodes sample:")
-print(nodes.head())
-
-print("\nEdges sample:")
-print(edges.head())
-
