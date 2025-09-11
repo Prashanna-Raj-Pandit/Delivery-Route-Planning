@@ -50,11 +50,6 @@ delivery_df = pd.read_csv(DELIVERY_FILE)
 # Convert node_ids to strings and keep only those that exist in the graph
 deliveries = [str(d) for d in delivery_df['node_id'] if str(d) in G.nodes]
 
-# Optional: warn if any points are missing
-missing = [str(d) for d in delivery_df['node_id'] if str(d) not in G.nodes]
-if missing:
-    print(f"Warning: {len(missing)} delivery points not in graph. They will be skipped.")
-
 
 #Experiment 1 - Varying delivery points
 print("\nRunning Experiment 1: Varying number of delivery points")
