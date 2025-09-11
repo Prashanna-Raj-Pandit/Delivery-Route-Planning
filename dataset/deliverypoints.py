@@ -26,15 +26,4 @@ df = pd.DataFrame(delivery_data)
 # Save to CSV
 df.to_csv("delivery_points.csv", index=False)
 
-# Print sample data
-print("Sample Delivery Points:")
-print(df.head())
-
-# Print statistics
-print("\nDataset Statistics:")
-print(df.describe(include='all'))
-
-# Priority distribution
-print("\nPriority Distribution:")
-print(df['priority'].value_counts())
 
