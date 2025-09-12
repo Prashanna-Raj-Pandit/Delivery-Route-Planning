@@ -54,8 +54,8 @@ deliveries = [str(d) for d in delivery_df['node_id'] if str(d) in G.nodes]
 #Experiment 1 - Varying delivery points
 print("\nRunning Experiment 1: Varying number of delivery points")
 experiment1Results = []
-# delivery_sizes = [100, 200, 300, 500, 1000]
-delivery_sizes=[100,500,1000,1500,2000]
+delivery_sizes = [100, 200, 300, 500, 1000]
+# delivery_sizes=[100,500,1000,1500,2000]
 
 
 
@@ -94,7 +94,7 @@ else:
 
 print(f"Using {len(deliveries)} delivery points")
 experiment2_results = []
-# Select depots (C, N, S, E, W) 
+# Select depots (C, N, S, E, W)
 depot_nodes = {}
 
 # Central = closest to centroid
@@ -116,7 +116,7 @@ experiment2Results = []
 depot_pairs = [("C","E"), ("S","E"), ("W","S"), ("E","W")]
 
 # Toggle: same_depot = True runs round trips, False runs cross-depot
-same_depot = False  
+same_depot = False
 
 for src, dst in depot_pairs:
     source = depot_nodes[src]
@@ -155,40 +155,40 @@ print(exp2_df)
 
 
 
-# #Experiment 3 - Priority delivery
-# print("\nRunning Experiment 3: Priority delivery")
-# experiment3_results = []
+#Experiment 3 - Priority delivery
+print("\nRunning Experiment 3: Priority delivery")
+experiment3_results = []
 
-# for n in delivery_sizes:
-#     trial_deliveries = deliveries[:n]
-#     depot = trial_deliveries[0]
+for n in delivery_sizes:
+    trial_deliveries = deliveries[:n]
+    depot = trial_deliveries[0]
 
-#     # Sort deliveries by priority (1=High first)
-#     trial_deliveries_sorted = delivery_df[delivery_df['node_id'].isin(trial_deliveries)].sort_values(by='priority')
-#     trial_deliveries_sorted = list(trial_deliveries_sorted['node_id'].astype(str))
+    # Sort deliveries by priority (1=High first)
+    trial_deliveries_sorted = delivery_df[delivery_df['node_id'].isin(trial_deliveries)].sort_values(by='priority')
+    trial_deliveries_sorted = list(trial_deliveries_sorted['node_id'].astype(str))
 
-#     start_time = time.time()
-#     route, total_distance = greedy_nearest_neighbor(G, depot, [d for d in trial_deliveries_sorted if d != depot])
-#     runtime = time.time() - start_time
-#     memory = psutil.Process().memory_info().rss / 1024**2
+    start_time = time.time()
+    route, total_distance = greedy_nearest_neighbor(G, depot, [d for d in trial_deliveries_sorted if d != depot])
+    runtime = time.time() - start_time
+    memory = psutil.Process().memory_info().rss / 1024**2
 
-#     # Measure priority adherence
-#     high_count = sum(1 for d in route if delivery_df.loc[delivery_df['node_id']==int(d), 'priority'].values[0]==1)
-#     total_high = sum(delivery_df['priority']==1)
-#     priority_adherence = high_count / total_high * 100 if total_high > 0 else 0
+    # Measure priority adherence
+    high_count = sum(1 for d in route if delivery_df.loc[delivery_df['node_id']==int(d), 'priority'].values[0]==1)
+    total_high = sum(delivery_df['priority']==1)
+    priority_adherence = high_count / total_high * 100 if total_high > 0 else 0
 
-#     experiment3_results.append({
-#         "num_deliveries": n,
-#         "depot": depot,
-#         "total_distance_m": total_distance,
-#         "runtime_s": runtime,
-#         "memory_MB": memory,
-#         "nodes_visited": len(route),
-#         "priority_adherence_%": priority_adherence
-#     })
+    experiment3_results.append({
+        "num_deliveries": n,
+        "depot": depot,
+        "total_distance_m": total_distance,
+        "runtime_s": runtime,
+        "memory_MB": memory,
+        "nodes_visited": len(route),
+        "priority_adherence_%": priority_adherence
+    })
 
-# exp3_df = pd.DataFrame(experiment3_results)
-# exp3_df.to_csv("experiment3_results.csv", index=False)
-# print(exp3_df)
+exp3_df = pd.DataFrame(experiment3_results)
+exp3_df.to_csv("experiment3_results.csv", index=False)
+print(exp3_df)
 
-# print("\nAll experiments completed. CSV files saved.")
+print("\nAll experiments completed. CSV files saved.")
