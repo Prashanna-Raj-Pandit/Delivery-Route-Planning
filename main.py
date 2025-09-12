@@ -54,7 +54,8 @@ deliveries = [str(d) for d in delivery_df['node_id'] if str(d) in G.nodes]
 #Experiment 1 - Varying delivery points
 print("\nRunning Experiment 1: Varying number of delivery points")
 experiment1Results = []
-delivery_sizes = [100, 200, 300, 500, 1000]
+# delivery_sizes = [100, 200, 300, 500, 1000]
+delivery_sizes=[100,500,1000,1500,2000]
 
 
 
@@ -63,7 +64,8 @@ for n in delivery_sizes:
     depot = trial_deliveries[0]
 
     start_time = time.time()
-    route, totalDistance = greedy_nearest_neighbor(G, depot, trial_deliveries[1:]) 
+    route, totalDistance = greedy_nearest_neighbor(G, depot, trial_deliveries[1:])
+    # print(f"Route from {depot} to {trial_deliveries[1:]}\n{route}")
     runtime = time.time() - start_time
     memory = psutil.Process().memory_info().rss / 1024**2  # in MB
 
@@ -131,6 +133,7 @@ for src, dst in depot_pairs:
     # Run the algorithm
     start_time = time.time()
     route, total_distance = greedy_nearest_neighbor(G, source, deliveries_for_run)
+    # print(f"Route from {source} to {deliveries_for_run}\n{route}")
     runtime = time.time() - start_time
     memory = psutil.Process().memory_info().rss / 1024**2
 
