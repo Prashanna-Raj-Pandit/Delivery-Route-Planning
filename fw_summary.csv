@@ -1,0 +1,2 @@
+n_deliveries,nodes_visited,edges_visited,total_distance_km,pairwise_osm_dist_sec,floyd_warshall_sec,route_construction_sec,osm_metrics_sec,total_runtime_sec,peak_memory_mb
+100,2212,2395,inf,637.4283190420028,0.05349558300076751,0.001147416995081585,0.005613542001810856,637.4885755840005,40.139957427978516
