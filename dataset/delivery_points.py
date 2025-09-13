@@ -46,5 +46,7 @@ def generate_delivery_points(sample_size=1000,distribution="equal"):
     print("\nPriority Distribution:")
     print(df['priority'].value_counts())
 
+    return  df
+
 # How to use ?
 # generate_delivery_points(sample_size=100,distribution="high_dominance")
