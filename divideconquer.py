@@ -30,7 +30,7 @@ class DivideConquerRouter:
         
         print("Loading graph...")
         self.G = ox.load_graphml(graph_file)
-       
+        
         print("Converting graph to GeoDataFrames...")
         self.nodes, self.edges = ox.graph_to_gdfs(self.G)
         
@@ -41,10 +41,10 @@ class DivideConquerRouter:
         self.nodes['y'] = pd.to_numeric(self.nodes['y'], errors='coerce')
         self.nodes = self.nodes.dropna(subset=['x', 'y']).copy()
         print("Cleaned nodes shape:", self.nodes.shape)
-       
+        
         print("Creating KDTree for nearest node search...")
         self.kdtree = KDTree(self.nodes[['y', 'x']])
-       
+        
         # Define depot locations (Central, Eastern, Western, Northern, Southern)
         self.depots = {
             'C': {'lat': 41.85, 'lon': -87.68, 'color': 'red'},
@@ -53,7 +53,7 @@ class DivideConquerRouter:
             'E': {'lat': 41.8914, 'lon': -87.6099, 'color': 'blue'},
             'W': {'lat': 41.8800, 'lon': -87.7500, 'color': 'green'},
         }
-       
+        
         # Assign each depot to the nearest node in the graph
         self.depot_nodes = {}
         for name, depot_info in self.depots.items():
@@ -63,12 +63,12 @@ class DivideConquerRouter:
             nearest_node = self.nodes.iloc[idx[0]].name
             self.depot_nodes[name] = nearest_node
             print(f"Depot {name} assigned to node: {nearest_node}")
-       
+        
         # Cache for Dijkstra results
         self.dijkstra_cache = lru_cache(maxsize=1000)(self._cached_dijkstra_distances)
-       
+        
         print("Router initialized successfully!")
-   
+
     def load_and_preprocess_points(self, delivery_points_file):
         """
         Load and preprocess delivery points
@@ -86,13 +86,13 @@ class DivideConquerRouter:
             lambda row: self.find_nearest_node(row['lat'], row['lon']), axis=1)
         
         return delivery_points
-   
+
     def _cached_dijkstra_distances(self, source_node):
         """
         Compute and cache Dijkstra distances from a source node to all other nodes
         """
         return nx.single_source_dijkstra_path_length(self.G, source_node, weight='length')
-   
+
     def get_region_for_point(self, lat, lon):
         """
         Determine which region a point belongs to based on coordinates
@@ -102,41 +102,41 @@ class DivideConquerRouter:
         elif lon < -87.70: return 'W'
         elif lon > -87.60: return 'E'
         else: return 'C'
-   
+
     def find_nearest_node(self, lat, lon):
         """
         Find the nearest graph node to given coordinates
         """
         dist, idx = self.kdtree.query([[lat, lon]])
         return self.nodes.iloc[idx[0]].name
-   
+
     def quad_tree_decomposition(self, points, max_points_per_region=25):
         """
         Perform quad-tree decomposition to partition delivery points
         """
         if len(points) <= max_points_per_region:
             return [points]
-       
+        
         min_lat, max_lat = points['lat'].min(), points['lat'].max()
         min_lon, max_lon = points['lon'].min(), points['lon'].max()
-       
+        
         mid_lat = (min_lat + max_lat) / 2
         mid_lon = (min_lon + max_lon) / 2
-       
+        
         quadrants = [
             points[(points['lat'] <= mid_lat) & (points['lon'] <= mid_lon)],
             points[(points['lat'] <= mid_lat) & (points['lon'] > mid_lon)],
             points[(points['lat'] > mid_lat) & (points['lon'] <= mid_lon)],
             points[(points['lat'] > mid_lat) & (points['lon'] > mid_lon)]
         ]
-       
+        
         regions = []
         for quadrant in quadrants:
             if len(quadrant) > 0:
                 regions.extend(self.quad_tree_decomposition(quadrant, max_points_per_region))
-       
+        
         return regions
-   
+
     def find_optimal_path_with_points(self, points, start_node, end_node, max_detour_ratio=0.5):
         """
         Find optimal path from start_node to end_node considering both distance and delivery points
@@ -199,9 +199,9 @@ class DivideConquerRouter:
                     continue
                 
                 # Calculate detour for this node
-                detour = (distances_from_current[node] + 
-                         distances_to_end[node] - 
-                         distances_from_current[end_node])
+                detour = (distances_from_current[node] +
+                          distances_to_end[node] -
+                          distances_from_current[end_node])
                 
                 # Skip if detour is too large
                 if detour > max_detour and node != end_node:
@@ -215,8 +215,8 @@ class DivideConquerRouter:
                 norm_delivery = new_points_covered / total_points if total_points > 0 else 0
                 
                 # Calculate weighted score (we want to minimize distance and maximize delivery)
-                score = (self.delivery_weight * norm_delivery - 
-                        self.distance_weight * norm_distance)
+                score = (self.delivery_weight * norm_delivery -
+                         self.distance_weight * norm_distance)
                 
                 if score > best_score:
                     best_score = score
@@ -255,30 +255,30 @@ class DivideConquerRouter:
                 continue
         
         return route, total_distance, len(covered_points)
-   
+
     def solve_tsp_nearest_neighbor(self, points, start_node, end_node=None):
         """
         Solve TSP using nearest neighbor (used for Experiments 2, 3, and sample viz)
         """
         if end_node is None:
             end_node = start_node
-       
+        
         point_nodes = set(points['nearest_node'].unique())
-       
+        
         route = [start_node]
         unvisited = point_nodes.copy()
         total_distance = 0
-       
+        
         if start_node != end_node:
             unvisited.add(end_node)
-       
+        
         current = start_node
         while unvisited:
             try:
                 distances = self.dijkstra_cache(current)
             except nx.NetworkXNoPath:
                 break
-           
+            
             nearest = None
             min_score = float('inf')
             for node in unvisited:
@@ -289,32 +289,32 @@ class DivideConquerRouter:
                     if score < min_score:
                         min_score = score
                         nearest = node
-           
+            
             if nearest is None:
                 break
-               
+                
             route.append(nearest)
             unvisited.remove(nearest)
             total_distance += distances[nearest]
             current = nearest
-       
+        
         return route, total_distance
-   
+
     def solve_region_routes(self, regions, start_depot, end_depot=None):
         """
         Solve routes for each region and connect them (used for Experiments 2 and 3)
         """
         if end_depot is None:
             end_depot = start_depot
-       
+        
         start_node = self.depot_nodes[start_depot]
         end_node = self.depot_nodes[end_depot]
-       
+        
         region_routes = []
         for region in regions:
             centroid_lat = region['lat'].mean()
             centroid_lon = region['lon'].mean()
-           
+            
             route, distance = self.solve_tsp_nearest_neighbor(region, start_node, end_node)
             region_routes.append({
                 'route': route,
@@ -323,15 +323,15 @@ class DivideConquerRouter:
                 'centroid_lon': centroid_lon,
                 'points': region
             })
-       
+        
         region_order = self.order_regions(region_routes, start_node, end_node)
-       
+        
         complete_route = [start_node]
         total_distance = 0
-       
+        
         for i, idx in enumerate(region_order):
             region = region_routes[idx]
-           
+            
             if i == 0:
                 try:
                     path = nx.shortest_path(self.G, complete_route[-1], region['route'][0], weight='length')
@@ -349,12 +349,12 @@ class DivideConquerRouter:
                     total_distance += dist
                 except:
                     pass
-           
+            
             complete_route.extend(region['route'][1:])
             total_distance += region['distance']
-       
+        
         return complete_route, total_distance, region_routes
-   
+
     def order_regions(self, regions, start_node, end_node):
         """
         Order regions for South-to-North progression (used for Experiments 2 and 3)
@@ -362,286 +362,7 @@ class DivideConquerRouter:
         region_indices = list(range(len(regions)))
         region_indices.sort(key=lambda i: regions[i]['centroid_lat'])
         return region_indices
-   
-    def run_experiment_1(self, sizes=[100, 200, 300, 500, 1000]):
-        """
-        Run scalability experiment with weighted South-to-North route
-        """
-        results = []
-        data_files = [f"delivery_points_{size}.csv" for size in sizes]
-       
-        for size, data_file in zip(sizes, data_files):
-            print(f"Running experiment for size {size}...")
-            delivery_points = self.load_and_preprocess_points(data_file)
-           
-            process = psutil.Process(os.getpid())
-            memory_before = process.memory_info().rss / 1024 / 1024
-           
-            start_time = time.time()
-            route, distance, points_covered = self.find_optimal_path_with_points(
-                delivery_points, self.depot_nodes['S'], self.depot_nodes['N'])
-            computation_time = time.time() - start_time
-           
-            memory_after = process.memory_info().rss / 1024 / 1024
-            memory_used = memory_after - memory_before
-           
-            visited_nodes = len(set(route))
-           
-            # Generate map visualization
-            self.visualize_route(route, delivery_points, f"Route_S_to_N_size_{size}")
-           
-            results.append({
-                'size': size,
-                'computation_time': computation_time,
-                'memory_used': memory_used,
-                'distance': distance,
-                'visited_nodes': visited_nodes,
-                'delivery_points_covered': points_covered,
-                'coverage_percentage': points_covered / size * 100
-            })
-           
-            print(f"Size {size}: {computation_time:.2f}s, {distance:.2f}m, {memory_used:.2f}MB, "
-                  f"{points_covered}/{size} points covered ({points_covered/size*100:.1f}%)")
-       
-        return pd.DataFrame(results)
-   
-    def run_experiment_2(self):
-        """
-        Run multi-depot experiment
-        """
-        results = []
-        depot_pairs = [('C', 'E'), ('S', 'E'), ('W', 'S'), ('E', 'W'), ('N', 'S')]
-       
-        delivery_points = self.load_and_preprocess_points("delivery_points_1000.csv")
-        for start_depot, end_depot in depot_pairs:
-            print(f"Running experiment for {start_depot}-{end_depot}...")
-            regions = self.quad_tree_decomposition(delivery_points, max_points_per_region=50)
-           
-            process = psutil.Process(os.getpid())
-            memory_before = process.memory_info().rss / 1024 / 1024
-           
-            start_time = time.time()
-            route, distance, region_data = self.solve_region_routes(regions, start_depot, end_depot)
-            computation_time = time.time() - start_time
-           
-            memory_after = process.memory_info().rss / 1024 / 1024
-            memory_used = memory_after - memory_before
-           
-            visited_nodes = len(set(route))
-           
-            delivery_nodes_covered = len([node for node in route if node in
-                set(delivery_points['nearest_node'])])
-           
-            results.append({
-                'depot_pair': f"{start_depot}-{end_depot}",
-                'computation_time': computation_time,
-                'memory_used': memory_used,
-                'distance': distance,
-                'visited_nodes': visited_nodes,
-                'delivery_points_covered': delivery_nodes_covered
-            })
-           
-            self.visualize_route_with_regions(route, delivery_points, region_data,
-                                            f"Route_{start_depot}_to_{end_depot}")
-           
-            print(f"{start_depot}-{end_depot}: {computation_time:.2f}s, {distance:.2f}m")
-       
-        return pd.DataFrame(results)
-   
-    def run_experiment_3(self):
-        """
-        Run priority-aware delivery experiment
-        """
-        results = []
-        priority_distributions = [
-            {'1': 0.33, '2': 0.34, '3': 0.33},
-            {'1': 0.6, '2': 0.3, '3': 0.1},
-            {'1': 0.1, '2': 0.3, '3': 0.6}
-        ]
-       
-        delivery_points = self.load_and_preprocess_points("delivery_points_1000.csv")
-        for i, dist in enumerate(priority_distributions):
-            print(f"Running experiment for distribution {i+1}...")
-            n = len(delivery_points)
-            n1 = int(n * dist['1'])
-            n2 = int(n * dist['2'])
-            n3 = n - n1 - n2
-           
-            priorities = [1] * n1 + [2] * n2 + [3] * n3
-            random.shuffle(priorities)
-           
-            points = delivery_points.copy()
-            points['priority'] = priorities[:n]
-           
-            regions = self.quad_tree_decomposition(points, max_points_per_region=50)
-            route, distance, region_data = self.solve_region_routes(regions, 'C')
-           
-            high_priority = sum(1 for p in points['priority'] if p == 1)
-            med_priority = sum(1 for p in points['priority'] if p == 2)
-            low_priority = sum(1 for p in points['priority'] if p == 3)
-           
-            results.append({
-                'distribution': f"Dist_{i+1}",
-                'distance': distance,
-                'high_priority_count': high_priority,
-                'med_priority_count': med_priority,
-                'low_priority_count': low_priority,
-                'high_percentage': high_priority/n*100,
-                'med_percentage': med_priority/n*100,
-                'low_percentage': low_priority/n*100
-            })
-           
-            self.visualize_priority_distribution(points, f"Priority_Distribution_{i+1}")
-           
-            print(f"Distribution {i+1}: {distance:.2f}m")
-       
-        return pd.DataFrame(results)
-   
-    def visualize_quad_tree(self, points, regions, title="Quad-Tree Decomposition"):
-        """
-        Visualize quad-tree decomposition with regional colors and depot letters
-        """
-        fig, ax = plt.subplots(figsize=(14, 12))
-       
-        self.edges.plot(ax=ax, linewidth=0.3, edgecolor='lightgray', alpha=0.5)
-       
-        region_colors = {
-            'N': 'purple', 'S': 'orange', 'E': 'blue',
-            'W': 'green', 'C': 'red'
-        }
-       
-        for _, point in points.iterrows():
-            region = self.get_region_for_point(point['lat'], point['lon'])
-            point_color = region_colors.get(region, 'gray')
-            ax.scatter(point['lon'], point['lat'], c=point_color, s=30, alpha=0.7)
-       
-        region_colors_list = ['cyan', 'magenta', 'yellow', 'lime', 'pink', 'brown', 'olive', 'navy']
-        for i, region in enumerate(regions):
-            min_lat, max_lat = region['lat'].min(), region['lat'].max()
-            min_lon, max_lon = region['lon'].min(), region['lon'].max()
-           
-            rect = patches.Rectangle(
-                (min_lon, min_lat), max_lon - min_lon, max_lat - min_lat,
-                linewidth=2, edgecolor=region_colors_list[i % len(region_colors_list)],
-                facecolor='none', alpha=0.8
-            )
-            ax.add_patch(rect)
-       
-        for name, depot_info in self.depots.items():
-            lat = depot_info['lat']
-            lon = depot_info['lon']
-            depot_color = depot_info['color']
-            ax.scatter(lon, lat, c=depot_color, s=200, marker='o', edgecolors='black',
-                       linewidth=2)
-            ax.text(lon, lat, name[0], fontsize=12, ha='center', va='center',
-                    color='white', weight='bold')
-       
-        from matplotlib.lines import Line2D
-        legend_elements = [
-            Line2D([0], [0], marker='o', color='w', markerfacecolor='purple', markersize=10, label='North'),
-            Line2D([0], [0], marker='o', color='w', markerfacecolor='orange', markersize=10, label='South'),
-            Line2D([0], [0], marker='o', color='w', markerfacecolor='blue', markersize=10, label='East'),
-            Line2D([0], [0], marker='o', color='w', markerfacecolor='green', markersize=10, label='West'),
-            Line2D([0], [0], marker='o', color='w', markerfacecolor='red', markersize=10, label='Central')
-        ]
-       
-        ax.legend(handles=legend_elements, loc='upper right')
-        ax.set_title(title, fontsize=16, fontweight='bold')
-        ax.set_xlabel('Longitude', fontsize=12)
-        ax.set_ylabel('Latitude', fontsize=12)
-       
-        plt.tight_layout()
-        plt.savefig(f"{title.replace(' ', '_')}.png", dpi=300, bbox_inches='tight')
-        plt.show()
-   
-    def visualize_route(self, route, points, title="Delivery Route"):
-        """
-        Visualize the single computed route with depot letters and legend
-        """
-        fig, ax = plt.subplots(figsize=(14, 12))
-       
-        # Plot street network
-        self.edges.plot(ax=ax, linewidth=0.3, edgecolor='lightgray', alpha=0.4)
-       
-        # Plot delivery points
-        ax.scatter(points['lon'], points['lat'], c='blue', s=40, alpha=0.8, label='Delivery Points')
-       
-        # Plot route
-        route_coords = []
-        for node in route:
-            if node in self.nodes.index:
-                node_data = self.nodes.loc[node]
-                route_coords.append((node_data['x'], node_data['y']))
-       
-        if route_coords:
-            lons, lats = zip(*route_coords)
-            ax.plot(lons, lats, 'k-', linewidth=2, alpha=0.8, label='Direct Route')
-       
-        # Plot South and North depots
-        for name in ['S', 'N']:
-            depot_info = self.depots[name]
-            lat = depot_info['lat']
-            lon = depot_info['lon']
-            depot_color = depot_info['color']
-            ax.scatter(lon, lat, c=depot_color, s=200, marker='o', edgecolors='black',
-                       linewidth=2, label=f"{name} Depot")
-            ax.text(lon, lat, name[0], fontsize=12, ha='center', va='center',
-                    color='white', weight='bold')
-       
-        ax.set_title(f"{title}\nTotal Distance: {self.calculate_route_distance(route):.2f}m",
-                     fontsize=16, fontweight='bold')
-        ax.set_xlabel('Longitude', fontsize=12)
-        ax.set_ylabel('Latitude', fontsize=12)
-        ax.legend(loc='upper right')
-       
-        plt.tight_layout()
-        plt.savefig(f"{title.replace(' ', '_')}.png", dpi=300, bbox_inches='tight')
-        plt.show()
-   
-    def visualize_route_with_regions(self, route, points, region_data, title="Delivery Route"):
-        """
-        Visualize the computed route with regional coloring (used for Experiments 2 and 3)
-        """
-        fig, ax = plt.subplots(figsize=(14, 12))
-       
-        self.edges.plot(ax=ax, linewidth=0.3, edgecolor='lightgray', alpha=0.4)
-       
-        region_colors = plt.cm.tab10(np.linspace(0, 1, len(region_data)))
-       
-        for i, region_info in enumerate(region_data):
-            region_points = region_info['points']
-            for _, point in region_points.iterrows():
-                ax.scatter(point['lon'], point['lat'], c=[region_colors[i]], s=40, alpha=0.8)
-       
-        route_coords = []
-        for node in route:
-            if node in self.nodes.index:
-                node_data = self.nodes.loc[node]
-                route_coords.append((node_data['x'], node_data['y']))
-       
-        if route_coords:
-            lons, lats = zip(*route_coords)
-            ax.plot(lons, lats, 'k-', linewidth=2, alpha=0.8, label='Route')
-       
-        for name, depot_info in self.depots.items():
-            lat = depot_info['lat']
-            lon = depot_info['lon']
-            depot_color = depot_info['color']
-            ax.scatter(lon, lat, c=depot_color, s=200, marker='o', edgecolors='black',
-                       linewidth=2)
-            ax.text(lon, lat, name[0], fontsize=12, ha='center', va='center',
-                    color='white', weight='bold')
-       
-        ax.set_title(f"{title}\nTotal Distance: {self.calculate_route_distance(route):.2f}m",
-                     fontsize=16, fontweight='bold')
-        ax.set_xlabel('Longitude', fontsize=12)
-        ax.set_ylabel('Latitude', fontsize=12)
-        ax.legend()
-       
-        plt.tight_layout()
-        plt.savefig(f"{title.replace(' ', '_')}.png", dpi=300, bbox_inches='tight')
-        plt.show()
-   
+
     def calculate_route_distance(self, route):
         """
         Calculate total distance of a route
@@ -654,7 +375,148 @@ class DivideConquerRouter:
             except:
                 continue
         return total_distance
-   
+
+    def visualize_quad_tree(self, points, regions, title="Quad-Tree Decomposition"):
+        """
+        Visualize quad-tree decomposition with regional colors and depot letters
+        """
+        fig, ax = plt.subplots(figsize=(14, 12))
+        
+        self.edges.plot(ax=ax, linewidth=0.3, edgecolor='lightgray', alpha=0.5)
+        
+        region_colors = {
+            'N': 'purple', 'S': 'orange', 'E': 'blue',
+            'W': 'green', 'C': 'red'
+        }
+        
+        for _, point in points.iterrows():
+            region = self.get_region_for_point(point['lat'], point['lon'])
+            point_color = region_colors.get(region, 'gray')
+            ax.scatter(point['lon'], point['lat'], c=point_color, s=30, alpha=0.7)
+        
+        region_colors_list = ['cyan', 'magenta', 'yellow', 'lime', 'pink', 'brown', 'olive', 'navy']
+        for i, region in enumerate(regions):
+            min_lat, max_lat = region['lat'].min(), region['lat'].max()
+            min_lon, max_lon = region['lon'].min(), region['lon'].max()
+            
+            rect = patches.Rectangle(
+                (min_lon, min_lat), max_lon - min_lon, max_lat - min_lat,
+                linewidth=2, edgecolor=region_colors_list[i % len(region_colors_list)],
+                facecolor='none', alpha=0.8
+            )
+            ax.add_patch(rect)
+        
+        for name, depot_info in self.depots.items():
+            lat = depot_info['lat']
+            lon = depot_info['lon']
+            depot_color = depot_info['color']
+            ax.scatter(lon, lat, c=depot_color, s=200, marker='o', edgecolors='black',
+                       linewidth=2)
+            ax.text(lon, lat, name[0], fontsize=12, ha='center', va='center',
+                    color='white', weight='bold')
+        
+        from matplotlib.lines import Line2D
+        legend_elements = [
+            Line2D([0], [0], marker='o', color='w', markerfacecolor='purple', markersize=10, label='North'),
+            Line2D([0], [0], marker='o', color='w', markerfacecolor='orange', markersize=10, label='South'),
+            Line2D([0], [0], marker='o', color='w', markerfacecolor='blue', markersize=10, label='East'),
+            Line2D([0], [0], marker='o', color='w', markerfacecolor='green', markersize=10, label='West'),
+            Line2D([0], [0], marker='o', color='w', markerfacecolor='red', markersize=10, label='Central')
+        ]
+        
+        ax.legend(handles=legend_elements, loc='upper right')
+        ax.set_title(title, fontsize=16, fontweight='bold')
+        ax.set_xlabel('Longitude', fontsize=12)
+        ax.set_ylabel('Latitude', fontsize=12)
+        
+        plt.tight_layout()
+        plt.savefig(f"{title.replace(' ', '_')}.png", dpi=300, bbox_inches='tight')
+        plt.show()
+
+    def visualize_route(self, route, points, title="Delivery Route"):
+        """
+        Visualize the single computed route with depot letters and legend
+        """
+        fig, ax = plt.subplots(figsize=(14, 12))
+        
+        self.edges.plot(ax=ax, linewidth=0.3, edgecolor='lightgray', alpha=0.4)
+        
+        ax.scatter(points['lon'], points['lat'], c='blue', s=40, alpha=0.8, label='Delivery Points')
+        
+        route_coords = []
+        for node in route:
+            if node in self.nodes.index:
+                node_data = self.nodes.loc[node]
+                route_coords.append((node_data['x'], node_data['y']))
+        
+        if route_coords:
+            lons, lats = zip(*route_coords)
+            ax.plot(lons, lats, 'k-', linewidth=2, alpha=0.8, label='Direct Route')
+        
+        for name in ['S', 'N']:
+            depot_info = self.depots[name]
+            lat = depot_info['lat']
+            lon = depot_info['lon']
+            depot_color = depot_info['color']
+            ax.scatter(lon, lat, c=depot_color, s=200, marker='o', edgecolors='black',
+                       linewidth=2, label=f"{name} Depot")
+            ax.text(lon, lat, name[0], fontsize=12, ha='center', va='center',
+                    color='white', weight='bold')
+        
+        ax.set_title(f"{title}\nTotal Distance: {self.calculate_route_distance(route):.2f}m",
+                     fontsize=16, fontweight='bold')
+        ax.set_xlabel('Longitude', fontsize=12)
+        ax.set_ylabel('Latitude', fontsize=12)
+        ax.legend(loc='upper right')
+        
+        plt.tight_layout()
+        plt.savefig(f"{title.replace(' ', '_')}.png", dpi=300, bbox_inches='tight')
+        plt.show()
+
+    def visualize_route_with_regions(self, route, points, region_data, title="Delivery Route"):
+        """
+        Visualize the computed route with regional coloring
+        """
+        fig, ax = plt.subplots(figsize=(14, 12))
+        
+        self.edges.plot(ax=ax, linewidth=0.3, edgecolor='lightgray', alpha=0.4)
+        
+        region_colors = plt.cm.tab10(np.linspace(0, 1, len(region_data)))
+        
+        for i, region_info in enumerate(region_data):
+            region_points = region_info['points']
+            for _, point in region_points.iterrows():
+                ax.scatter(point['lon'], point['lat'], c=[region_colors[i]], s=40, alpha=0.8)
+        
+        route_coords = []
+        for node in route:
+            if node in self.nodes.index:
+                node_data = self.nodes.loc[node]
+                route_coords.append((node_data['x'], node_data['y']))
+        
+        if route_coords:
+            lons, lats = zip(*route_coords)
+            ax.plot(lons, lats, 'k-', linewidth=2, alpha=0.8, label='Route')
+        
+        for name, depot_info in self.depots.items():
+            lat = depot_info['lat']
+            lon = depot_info['lon']
+            depot_color = depot_info['color']
+            ax.scatter(lon, lat, c=depot_color, s=200, marker='o', edgecolors='black',
+                       linewidth=2)
+            ax.text(lon, lat, name[0], fontsize=12, ha='center', va='center',
+                    color='white', weight='bold')
+        
+        ax.set_title(f"{title}\nTotal Distance: {self.calculate_route_distance(route):.2f}m",
+                     fontsize=16, fontweight='bold')
+        ax.set_xlabel('Longitude', fontsize=12)
+        ax.set_ylabel('Latitude', fontsize=12)
+        ax.legend()
+        
+        plt.tight_layout()
+        plt.savefig(f"{title.replace(' ', '_')}.png", dpi=300, bbox_inches='tight')
+        plt.show()
+
     def visualize_priority_distribution(self, points, title="Priority Distribution"):
         """
         Visualize priority distribution across regions
@@ -695,203 +557,3 @@ class DivideConquerRouter:
         plt.tight_layout()
         plt.savefig(f"{title.replace(' ', '_')}.png", dpi=300, bbox_inches='tight')
         plt.show()
-   
-    def create_comprehensive_analysis_plots(self, exp1_results, exp2_results, exp3_results):
-        """
-        Create comprehensive analysis plots with multiple visualization types
-        """
-        fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-       
-        axes[0, 0].plot(exp1_results['size'], exp1_results['computation_time'], 'o-', linewidth=2, color='blue')
-        axes[0, 0].set_xlabel('Number of Delivery Points')
-        axes[0, 0].set_ylabel('Computation Time (s)')
-        axes[0, 0].set_title('Computation Time vs Problem Size')
-        axes[0, 0].grid(True, alpha=0.3)
-       
-        axes[0, 1].plot(exp1_results['size'], exp1_results['memory_used'], 's-', linewidth=2, color='orange')
-        axes[0, 1].set_xlabel('Number of Delivery Points')
-        axes[0, 1].set_ylabel('Memory Usage (MB)')
-        axes[0, 1].set_title('Memory Usage vs Problem Size')
-        axes[0, 1].grid(True, alpha=0.3)
-       
-        axes[0, 2].plot(exp1_results['size'], exp1_results['distance'], '^-', linewidth=2, color='green')
-        axes[0, 2].set_xlabel('Number of Delivery Points')
-        axes[0, 2].set_ylabel('Total Distance (m)')
-        axes[0, 2].set_title('Total Distance vs Problem Size')
-        axes[0, 2].grid(True, alpha=0.3)
-       
-        axes[1, 0].plot(exp1_results['size'], exp1_results['delivery_points_covered'], 'v-', linewidth=2, color='purple')
-        axes[1, 0].set_xlabel('Number of Delivery Points')
-        axes[1, 0].set_ylabel('Points Covered')
-        axes[1, 0].set_title('Delivery Points Covered vs Problem Size')
-        axes[1, 0].grid(True, alpha=0.3)
-       
-        efficiency = exp1_results['delivery_points_covered'] / exp1_results['size']
-        axes[1, 1].plot(exp1_results['size'], efficiency, '*-', linewidth=2, color='brown')
-        axes[1, 1].set_xlabel('Number of Delivery Points')
-        axes[1, 1].set_ylabel('Efficiency Ratio')
-        axes[1, 1].set_title('Coverage Efficiency vs Problem Size')
-        axes[1, 1].grid(True, alpha=0.3)
-       
-        axes[1, 2].axis('off')  # Remove unused subplot
-       
-        plt.tight_layout()
-        plt.savefig('Comprehensive_Scalability_Analysis.png', dpi=300, bbox_inches='tight')
-        plt.show()
-       
-        fig, ax = plt.subplots(figsize=(10, 8))
-       
-        depot_pairs = [pair.split('-') for pair in exp2_results['depot_pair']]
-        performance_data = exp2_results[['distance', 'computation_time', 'memory_used']].values
-       
-        im = ax.imshow(performance_data, cmap='viridis', aspect='auto')
-       
-        ax.set_xticks(range(3))
-        ax.set_xticklabels(['Distance (m)', 'Time (s)', 'Memory (MB)'])
-        ax.set_yticks(range(len(depot_pairs)))
-        ax.set_yticklabels(exp2_results['depot_pair'])
-       
-        for i in range(len(depot_pairs)):
-            for j in range(3):
-                text = ax.text(j, i, f'{performance_data[i, j]:.1f}',
-                               ha="center", va="center", color="w", fontweight='bold')
-       
-        ax.set_title('Multi-Depot Performance Comparison', fontsize=14, fontweight='bold')
-        plt.colorbar(im, ax=ax)
-        plt.tight_layout()
-        plt.savefig('Multi_Depot_Performance_Heatmap.png', dpi=300, bbox_inches='tight')
-        plt.show()
-       
-        fig = plt.figure(figsize=(12, 10))
-        ax = fig.add_subplot(111, polar=True)
-       
-        categories = ['High Priority', 'Medium Priority', 'Low Priority', 'Distance', 'Efficiency']
-        N = len(categories)
-       
-        angles = [n / float(N) * 2 * np.pi for n in range(N)]
-        angles += angles[:1]
-       
-        for i, row in exp3_results.iterrows():
-            values = [
-                row['high_percentage'],
-                row['med_percentage'],
-                row['low_percentage'],
-                row['distance'] / 1000,
-                100
-            ]
-            values += values[:1]
-            ax.plot(angles, values, linewidth=2, linestyle='solid', label=f'Distribution {i+1}')
-            ax.fill(angles, values, alpha=0.1)
-       
-        ax.set_thetagrids([a * 180/np.pi for a in angles[:-1]], categories)
-        ax.set_title('Priority Distribution Analysis', size=16, fontweight='bold')
-        ax.legend(loc='upper right')
-        plt.tight_layout()
-        plt.savefig('Priority_Analysis_Radar.png', dpi=300, bbox_inches='tight')
-        plt.show()
-       
-        fig, ax = plt.subplots(figsize=(12, 8))
-       
-        delivery_points = self.load_and_preprocess_points("delivery_points_1000.csv")
-        delivery_points['region'] = delivery_points.apply(
-            lambda x: self.get_region_for_point(x['lat'], x['lon']), axis=1)
-       
-        region_counts = delivery_points['region'].value_counts()
-        colors = [self.depots[r]['color'] for r in region_counts.index]
-       
-        bars = ax.bar(region_counts.index, region_counts.values, color=colors, alpha=0.7)
-       
-        for bar in bars:
-            height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height + 5,
-                    f'{int(height)}', ha='center', va='bottom', fontweight='bold')
-       
-        ax.set_title('Delivery Points Distribution by Region', fontsize=16, fontweight='bold')
-        ax.set_xlabel('Region')
-        ax.set_ylabel('Number of Delivery Points')
-        ax.grid(True, alpha=0.3)
-       
-        plt.tight_layout()
-        plt.savefig('Regional_Distribution_Analysis.png', dpi=300, bbox_inches='tight')
-        plt.show()
-
-# Main execution
-if __name__ == "__main__":
-    print("Starting Enhanced Divide and Conquer Route Optimization...")
-    print("="*60)
-   
-    try:
-        # Initialize with custom weights (0.3 for distance, 0.7 for delivery points)
-        router = DivideConquerRouter(
-            graph_file="chicago_street_network.graphml",
-            distance_weight=0.3,
-            delivery_weight=0.7
-        )
-       
-        # Run Experiment 1: Scalability with weighted South-to-North route
-        print("\n" + "="*50)
-        print("RUNNING EXPERIMENT 1: SCALABILITY TEST")
-        print("="*50)
-        exp1_results = router.run_experiment_1(sizes=[100, 200, 300, 500, 1000])
-        exp1_results.to_csv("experiment_1_results.csv", index=False)
-        print("✓ Experiment 1 completed! Results saved to experiment_1_results.csv")
-       
-        # Run Experiment 2: Multi-depot
-        print("\n" + "="*50)
-        print("RUNNING EXPERIMENT 2: MULTI-DEPOT ANALYSIS")
-        print("="*50)
-        exp2_results = router.run_experiment_2()
-        exp2_results.to_csv("experiment_2_results.csv", index=False)
-        print("✓ Experiment 2 completed! Results saved to experiment_2_results.csv")
-       
-        # Run Experiment 3: Priority-aware delivery
-        print("\n" + "="*50)
-        print("RUNNING EXPERIMENT 3: PRIORITY-AWARE DELIVERY")
-        print("="*50)
-        exp3_results = router.run_experiment_3()
-        exp3_results.to_csv("experiment_3_results.csv", index=False)
-        print("✓ Experiment 3 completed! Results saved to experiment_3_results.csv")
-       
-        # Generate comprehensive visualizations
-        print("\n" + "="*50)
-        print("GENERATING COMPREHENSIVE VISUALIZATIONS")
-        print("="*50)
-       
-        # Use delivery_points_100.csv for sample visualizations
-        sample_points = router.load_and_preprocess_points("delivery_points_100.csv")
-        regions = router.quad_tree_decomposition(sample_points, max_points_per_region=25)
-       
-        print("Generating Quad-Tree visualization...")
-        router.visualize_quad_tree(sample_points, regions, "Enhanced_Quad-Tree_Decomposition")
-       
-        print("Generating sample route visualization...")
-        route, distance, points_covered = router.find_optimal_path_with_points(
-            sample_points, router.depot_nodes['S'], router.depot_nodes['N'])
-        router.visualize_route(route, sample_points, "Sample_Delivery_Route_S_to_N")
-       
-        print("Generating comprehensive analysis plots...")
-        router.create_comprehensive_analysis_plots(exp1_results, exp2_results, exp3_results)
-       
-        print("\n" + "="*60)
-        print("ALL EXPERIMENTS COMPLETED SUCCESSFULLY!")
-        print("="*60)
-        print("\nGENERATED FILES:")
-        print("1. experiment_1_results.csv")
-        print("2. experiment_2_results.csv")
-        print("3. experiment_3_results.csv")
-        print("4. Route_S_to_N_size_100.png, Route_S_to_N_size_200.png, ..., Route_S_to_N_size_1000.png")
-        print("5. Enhanced_Quad-Tree_Decomposition.png")
-        print("6. Sample_Delivery_Route_S_to_N.png")
-        print("7. Route_C_to_E.png, Route_S_to_E.png, etc. (for each depot pair)")
-        print("8. Priority_Distribution_1.png, Priority_Distribution_2.png, etc.")
-        print("9. Comprehensive_Scalability_Analysis.png")
-        print("10. Multi_Depot_Performance_Heatmap.png")
-        print("11. Priority_Analysis_Radar.png")
-        print("12. Regional_Distribution_Analysis.png")
-        print("\n" + "="*60)
-       
-    except Exception as e:
-        print(f"Error occurred: {e}")
-        import traceback
-        traceback.print_exc()
-        print("Please check if the graph and delivery points files exist in the correct paths.")

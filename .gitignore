@@ -1,6 +1,10 @@
 chicago_edges.csv
 chicago_nodes.csv
 chicago_street_network.graphml
-delivery_points.csv
+delivery_points_100.csv
+delivery_points_200.csv
+delivery_points_300.csv
+delivery_points_500.csv
+delivery_points_1000.csv
 edges.csv
 nodes.csv
