@@ -193,53 +193,58 @@ for dist_name in priority_distributions:
         distribution=dist_name
     )
 
-   # Ensure node IDs are strings
+    # Ensure node IDs are strings
     deliveries_df["node_id"] = deliveries_df["node_id"].astype(str)
 
+    # Pick depot as first delivery node
     depot = deliveries_df.iloc[0]["node_id"]
-    delivery_nodes = [n for n in deliveries_df["node_id"].values if n != depot]
+    delivery_nodes = deliveries_df[deliveries_df["node_id"] != depot]
 
-# Optional: filter only reachable nodes
+    # Optional: keep only reachable nodes
     reachable_nodes = nx.single_source_dijkstra_path_length(G, depot).keys()
-    delivery_nodes = [n for n in delivery_nodes if n in reachable_nodes]
+    delivery_nodes = delivery_nodes[delivery_nodes["node_id"].isin(reachable_nodes)]
 
-# Run greedy
-    route, distance = greedy_nearest_neighbor(G, depot, delivery_nodes)
+    # --- Priority-aware ordering ---
+    # High (1) → Medium (2) → Low (3)
+    ordered_nodes = []
+    for priority in [1, 2, 3]:
+        group = delivery_nodes[delivery_nodes["priority"] == priority]["node_id"].tolist()
+        if group:
+            subroute, _ = greedy_nearest_neighbor(G, depot if not ordered_nodes else ordered_nodes[-1], group)
+            ordered_nodes.extend(subroute[1:] if ordered_nodes else subroute)
+
+    # Compute total distance for combined route
+    total_distance = 0
+    for u, v in zip(ordered_nodes[:-1], ordered_nodes[1:]):
+        total_distance += nx.shortest_path_length(G, u, v, weight="length")
+
     runtime = time.time() - start_time
     memory = psutil.Process().memory_info().rss / 1024**2
 
-    high_priority = sum(deliveries_df["priority"] == 1)
-    med_priority = sum(deliveries_df["priority"] == 2)
-    low_priority = sum(deliveries_df["priority"] == 3)
-    n = len(deliveries_df)
+    # Stats
+    high_count = (delivery_nodes["priority"] == 1).sum()
+    med_count = (delivery_nodes["priority"] == 2).sum()
+    low_count = (delivery_nodes["priority"] == 3).sum()
+    total = len(delivery_nodes)
 
     experiment3results.append({
         "distribution": dist_name,
-        "num_deliveries": 1000,
+        "num_deliveries": total,
         "depot": depot,
-        "total_distance_m": distance,
+        "total_distance_m": total_distance,
         "runtime_s": runtime,
         "memory_MB": memory,
-        "high_priority_count": high_priority,
-        "med_priority_count": med_priority,
-        "low_priority_count": low_priority,
-        "high_percentage": high_priority / n * 100,
-        "med_percentage": med_priority / n * 100,
-        "low_percentage": low_priority / n * 100
+        "high_priority_count": high_count,
+        "med_priority_count": med_count,
+        "low_priority_count": low_count,
+        "high_percentage": round(100*high_count/total,1),
+        "med_percentage": round(100*med_count/total,1),
+        "low_percentage": round(100*low_count/total,1),
     })
 
-    print(f"Distribution {dist_name}: {distance:.2f} m, "
-          f"Runtime: {runtime:.2f}s, Memory: {memory:.2f} MB")
-
-df = pd.DataFrame(experiment3results)
-df.to_csv("experiment3_results.csv", index=False)
-
-if not os.path.exists('plots'):
-    os.makedirs('plots')
-
-greedyPlot.plot_experiment3_results(df)
-print(df)
-
-
-
-
+# Save results
+exp3_df = pd.DataFrame(experiment3results)
+exp3_df.to_csv("experiment3_results.csv", index=False)
+print("Experiment 3 plots saved in 'plots/' directory")
+greedyPlot.plot_experiment3_results(exp3_df)
+print(exp3_df)
