@@ -1,0 +1,123 @@
+Pair: West → South
+CLEAN PATH: Building route along shortest path...
+  Found 34 regions along the path
+  Added region with 13 deliveries
+  Added region with 11 deliveries
+  Added region with 7 deliveries
+  Added region with 6 deliveries
+  Added region with 16 deliveries
+  Added region with 6 deliveries
+  Added region with 10 deliveries
+  Added region with 15 deliveries
+  Added region with 8 deliveries
+  Could not route through region: Node 408460227 not reachable from 261116702
+  Could not route through region: Node 5485576609 not reachable from 261116702
+  Could not route through region: Node 261284675 not reachable from 261116702
+  Could not route through region: Node 261349989 not reachable from 261116702
+  Could not route through region: Node 5893186433 not reachable from 261116702
+  Could not route through region: Node 2016951877 not reachable from 261116702
+  Could not route through region: Node 261184708 not reachable from 261116702
+  Could not route through region: Node 261142084 not reachable from 261116702
+  Could not route through region: Node 261151938 not reachable from 261116702
+  Could not route through region: Node 261097345 not reachable from 261116702
+  Could not route through region: Node 261184800 not reachable from 261116702
+  Could not route through region: Node 261285313 not reachable from 261116702
+  Could not route through region: Node 261174048 not reachable from 261116702
+  Could not route through region: Node 261185759 not reachable from 261116702
+  Could not route through region: Node 8727144292 not reachable from 261116702
+  Could not route through region: Node 261220705 not reachable from 261116702
+  Could not route through region: Node 2876586242 not reachable from 261116702
+  Could not route through region: Node 261155427 not reachable from 261116702
+  Could not route through region: Node 261347713 not reachable from 261116702
+  Could not route through region: Node 261118848 not reachable from 261116702
+  Could not route through region: Node 261168037 not reachable from 261116702
+  Could not route through region: Node 10834655588 not reachable from 261116702
+  Could not route through region: Node 261211108 not reachable from 261116702
+  Could not route through region: Node 261198752 not reachable from 261116702
+  Could not route through region: Node 261230987 not reachable from 261116702
+  Warning: Could not route to end depot: Node 261118842 not reachable from 261116702
+CLEAN PATH: distance = 110.35 km | regions used = 9 | deliveries = 92
+CLEAN PATH: Building route along shortest path...
+  Found 34 regions along the path
+  Added region with 13 deliveries
+  Added region with 11 deliveries
+  Added region with 7 deliveries
+  Added region with 6 deliveries
+  Added region with 16 deliveries
+  Added region with 6 deliveries
+  Added region with 10 deliveries
+  Added region with 15 deliveries
+  Added region with 8 deliveries
+  Could not route through region: Node 408460227 not reachable from 261116702
+  Could not route through region: Node 5485576609 not reachable from 261116702
+  Could not route through region: Node 261284675 not reachable from 261116702
+  Could not route through region: Node 261349989 not reachable from 261116702
+  Could not route through region: Node 5893186433 not reachable from 261116702
+  Could not route through region: Node 2016951877 not reachable from 261116702
+  Could not route through region: Node 261184708 not reachable from 261116702
+  Could not route through region: Node 261142084 not reachable from 261116702
+  Could not route through region: Node 261151938 not reachable from 261116702
+  Could not route through region: Node 261097345 not reachable from 261116702
+  Could not route through region: Node 261184800 not reachable from 261116702
+  Could not route through region: Node 261285313 not reachable from 261116702
+  Could not route through region: Node 261174048 not reachable from 261116702
+  Could not route through region: Node 261185759 not reachable from 261116702
+  Could not route through region: Node 8727144292 not reachable from 261116702
+  Could not route through region: Node 261220705 not reachable from 261116702
+  Could not route through region: Node 2876586242 not reachable from 261116702
+  Could not route through region: Node 261155427 not reachable from 261116702
+  Could not route through region: Node 261347713 not reachable from 261116702
+  Could not route through region: Node 261118848 not reachable from 261116702
+  Could not route through region: Node 261168037 not reachable from 261116702
+  Could not route through region: Node 10834655588 not reachable from 261116702
+  Could not route through region: Node 261211108 not reachable from 261116702
+  Could not route through region: Node 261198752 not reachable from 261116702
+  Could not route through region: Node 261230987 not reachable from 261116702
+  Warning: Could not route to end depot: Node 261118842 not reachable from 261116702
+CLEAN PATH: distance = 110.35 km | regions used = 9 | deliveries = 92
+  dist=110.4 km  covered=92/1000 time=6.45s  mem≈0.0MB
+
+Pair: East → West
+CLEAN PATH: Building route along shortest path...
+  Found 18 regions along the path
+  Added region with 14 deliveries
+  Added region with 5 deliveries
+  Added region with 18 deliveries
+  Added region with 7 deliveries
+  Added region with 4 deliveries
+  Added region with 7 deliveries
+  Added region with 4 deliveries
+  Added region with 8 deliveries
+  Added region with 8 deliveries
+  Added region with 14 deliveries
+  Added region with 15 deliveries
+  Added region with 6 deliveries
+  Added region with 10 deliveries
+  Added region with 7 deliveries
+  Added region with 6 deliveries
+  Added region with 11 deliveries
+  Added region with 16 deliveries
+  Added region with 13 deliveries
+CLEAN PATH: distance = 222.20 km | regions used = 18 | deliveries = 173
+CLEAN PATH: Building route along shortest path...
+  Found 18 regions along the path
+  Added region with 14 deliveries
+  Added region with 5 deliveries
+  Added region with 18 deliveries
+  Added region with 7 deliveries
+  Added region with 4 deliveries
+  Added region with 7 deliveries
+  Added region with 4 deliveries
+  Added region with 8 deliveries
+  Added region with 8 deliveries
+  Added region with 14 deliveries
+  Added region with 15 deliveries
+  Added region with 6 deliveries
+  Added region with 10 deliveries
+  Added region with 7 deliveries
+  Added region with 6 deliveries
+  Added region with 11 deliveries
+  Added region with 16 deliveries
+  Added region with 13 deliveries
+CLEAN PATH: distance = 222.20 km | regions used = 18 | deliveries = 173
+  dist=222.2 km  covered=173/1000 time=5.78s  mem≈0.0MB

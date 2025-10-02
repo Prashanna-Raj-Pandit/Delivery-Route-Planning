@@ -8,3 +8,11 @@ delivery_points_500.csv
 delivery_points_1000.csv
 edges.csv
 nodes.csv
+._pycache_/
+pycache/
+__pycache__/
+*.pyc
+cache/
+.idea
+.vscode
+.DS_Store

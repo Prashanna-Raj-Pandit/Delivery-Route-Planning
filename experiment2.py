@@ -1,148 +1,162 @@
-from divideconquer import DivideConquerRouter
-import pandas as pd
+# experiment2.py (compatible with your current divideconquer.py)
+import os, time, gc
 import psutil
-import os
-import time
-import matplotlib.pyplot as plt
+import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+from memory_profiler import memory_usage
 
-def run_experiment_2(router):
+from divideconquer import DivideConquerRouter
+
+# --- small helper: haversine distance in km ---
+def haversine_km(lat1, lon1, lat2, lon2):
+    R = 6371.0
+    p1 = np.radians(lat1); p2 = np.radians(lat2)
+    dlat = p2 - p1
+    dlon = np.radians(lon2) - np.radians(lon1)
+    a = np.sin(dlat/2.0)**2 + np.cos(p1)*np.cos(p2)*np.sin(dlon/2.0)**2
+    return 2*R*np.arcsin(np.sqrt(a))
+
+def run_experiment_2(router: DivideConquerRouter):
     """
-    Run multi-depot experiment
+    Multi-depot experiment: one clean single-path route per start→end pair.
+    Uses the corridor+quad-tree method implemented in DivideConquerRouter.solve_clean_single_path.
+    No budget logic here (consistent with your latest preference).
     """
     results = []
-    depot_pairs = [('C', 'E'), ('S', 'E'), ('W', 'S'), ('E', 'W'), ('N', 'S')]
-    
-    try:
-        delivery_points = router.load_and_preprocess_points("delivery_points_1000.csv")
-    except FileNotFoundError:
-        print("Error: delivery_points_1000.csv not found.")
-        return pd.DataFrame()
-    
-    for start_depot, end_depot in depot_pairs:
-        print(f"Running experiment for {start_depot}-{end_depot}...")
-        regions = router.quad_tree_decomposition(delivery_points, max_points_per_region=50)
-        
-        process = psutil.Process(os.getpid())
-        memory_before = process.memory_info().rss / 1024 / 1024
-        
-        start_time = time.time()
-        route, distance, region_data = router.solve_region_routes(regions, start_depot, end_depot)
-        computation_time = time.time() - start_time
-        
-        memory_after = process.memory_info().rss / 1024 / 1024
-        memory_used = memory_after - memory_before
-        
-        visited_nodes = len(set(route))
-        
-        delivery_nodes_covered = len([node for node in route if node in
-            set(delivery_points['nearest_node'])])
-        
-        results.append({
-            'depot_pair': f"{start_depot}-{end_depot}",
-            'computation_time': computation_time,
-            'memory_used': memory_used,
-            'distance': distance,
-            'visited_nodes': visited_nodes,
-            'delivery_points_covered': delivery_nodes_covered
-        })
-        
-        router.visualize_route_with_regions(route, delivery_points, region_data,
-                                         f"Route_{start_depot}_to_{end_depot}")
-        
-        print(f"{start_depot}-{end_depot}: {computation_time:.2f}s, {distance:.2f}m")
-    
-    # Save results to CSV
-    if results:
-        results_df = pd.DataFrame(results)
-        results_df.to_csv("experiment_2_results.csv", index=False)
-        print("Results saved to experiment_2_results.csv")
-    else:
-        print("No results to save. Check for errors in data loading or processing.")
-    
-    return pd.DataFrame(results)
+    # Try a few interesting pairs covering different directions
+    pairs = [('S','E'), ('C','E'), ('W','S'), ('E','W'), ('N','S')]
+    names = {k: v['name'] for k, v in router.depots.items()}
 
-def create_multi_depot_plots(router, exp2_results):
-    """
-    Create multi-depot performance and regional distribution plots for Experiment 2
-    """
-    # Multi-depot performance heatmap
-    fig, ax = plt.subplots(figsize=(10, 8))
-    
-    depot_pairs = [pair.split('-') for pair in exp2_results['depot_pair']]
-    performance_data = exp2_results[['distance', 'computation_time', 'memory_used']].values
-    
-    im = ax.imshow(performance_data, cmap='viridis', aspect='auto')
-    
-    ax.set_xticks(range(3))
-    ax.set_xticklabels(['Distance (m)', 'Time (s)', 'Memory (MB)'])
-    ax.set_yticks(range(len(depot_pairs)))
-    ax.set_yticklabels(exp2_results['depot_pair'])
-    
-    for i in range(len(depot_pairs)):
-        for j in range(3):
-            text = ax.text(j, i, f'{performance_data[i, j]:.1f}',
-                           ha="center", va="center", color="w", fontweight='bold')
-    
-    ax.set_title('Multi-Depot Performance Comparison', fontsize=14, fontweight='bold')
-    plt.colorbar(im, ax=ax)
+    # Load one common dataset
+    points = router.load_and_preprocess_points("delivery_points_1000.csv")
+
+    for s, e in pairs:
+        print(f"\nPair: {names[s]} → {names[e]}")
+        process = psutil.Process(os.getpid())
+        gc.collect()
+        mem_before = process.memory_info().rss / (1024*1024)
+
+        # Wrap the call for memory_profiler peak tracking
+        def _runner():
+            return router.solve_clean_single_path(
+                delivery_points=points,
+                start_depot=s,
+                end_depot=e,
+                max_points_per_region=20,
+                corridor_width_km=3.0
+            )
+
+        t0 = time.time()
+        # memory_usage with (func, args, kwargs) returns peak MB
+        mem_peak = memory_usage((_runner, (), {}), interval=0.1, max_usage=True)
+        route, dist_m, used_regions, visited_deliveries = _runner()
+        dt = time.time() - t0
+
+        # Compute actual polyline distance (your helper recomputes exactly)
+        actual_dist_m = router.calculate_route_distance(route)
+        covered = len(visited_deliveries)
+
+        mem_used = max(mem_peak - mem_before, 0.0)
+        results.append({
+            'depot_pair': f"{names[s]} to {names[e]}",
+            'computation_time_s': dt,
+            'memory_used_mb': mem_used,
+            'distance_km': actual_dist_m/1000.0,
+            'visited_nodes': len(set(route)),
+            'delivery_points_covered': covered,
+            'coverage_percentage': covered/len(points)*100.0
+        })
+
+        # NOTE: visualize_route signature is:
+        # visualize_route(route_nodes, delivery_points, visited_deliveries, title, start_depot=None, end_depot=None)
+        router.visualize_route(
+            route_nodes=route,
+            delivery_points=points,
+            visited_deliveries=visited_deliveries,
+            title=f"Route_{names[s]}_to_{names[e]}",
+            start_depot=s,
+            end_depot=e
+        )
+
+        print(f"  dist={actual_dist_m/1000:.1f} km  "
+              f"covered={covered}/{len(points)} "
+              f"time={dt:.2f}s  mem≈{mem_used:.1f}MB")
+
+    df = pd.DataFrame(results)
+    df.to_csv("experiment_2_results.csv", index=False)
+    return df
+
+def create_multi_depot_plots(results: pd.DataFrame):
+    # heatmap-style table
+    fig, ax = plt.subplots(figsize=(12, 7))
+    data = results[['distance_km','computation_time_s','memory_used_mb','delivery_points_covered']].values
+    im = ax.imshow(data, cmap='viridis', aspect='auto')
+    ax.set_xticks(range(4)); ax.set_xticklabels(['Distance (km)','Time (s)','Memory (MB)','Covered'], fontsize=12)
+    ax.set_yticks(range(len(results))); ax.set_yticklabels(results['depot_pair'], fontsize=12)
+    for i in range(data.shape[0]):
+        for j in range(data.shape[1]):
+            ax.text(j, i, f"{data[i,j]:.1f}" if j<3 else f"{int(data[i,j])}",
+                    ha='center', va='center', color='w', fontweight='bold')
+    ax.set_title("Multi-Depot Performance Comparison", fontweight='bold')
+    plt.colorbar(im, ax=ax, label='Value'); plt.tight_layout()
+    plt.savefig("Multi_Depot_Performance_Heatmap.png", dpi=300, bbox_inches='tight')
+    plt.close()
+
+    # bar for covered points
+    fig, ax = plt.subplots(figsize=(12, 7))
+    ax.bar(results['depot_pair'], results['delivery_points_covered'], color='skyblue')
+    for rect in ax.patches:
+        ax.text(rect.get_x()+rect.get_width()/2, rect.get_height()+5, f"{int(rect.get_height())}",
+                ha='center', va='bottom', fontweight='bold')
+    ax.set_title("Delivery Points Covered by Depot Pair", fontweight='bold')
+    ax.set_ylabel("Points"); ax.set_xlabel("Depot Pair")
+    plt.xticks(rotation=30, ha='right'); ax.grid(True, alpha=.3)
     plt.tight_layout()
-    plt.savefig('Multi_Depot_Performance_Heatmap.png', dpi=300, bbox_inches='tight')
-    plt.show()
-    
-    # Regional distribution analysis
-    fig, ax = plt.subplots(figsize=(12, 8))
-    
-    delivery_points = router.load_and_preprocess_points("delivery_points_1000.csv")
-    delivery_points['region'] = delivery_points.apply(
-        lambda x: router.get_region_for_point(x['lat'], x['lon']), axis=1)
-    
-    region_counts = delivery_points['region'].value_counts()
-    colors = [router.depots[r]['color'] for r in region_counts.index]
-    
-    bars = ax.bar(region_counts.index, region_counts.values, color=colors, alpha=0.7)
-    
-    for bar in bars:
-        height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2., height + 5,
-                f'{int(height)}', ha='center', va='bottom', fontweight='bold')
-    
-    ax.set_title('Delivery Points Distribution by Region', fontsize=16, fontweight='bold')
-    ax.set_xlabel('Region')
-    ax.set_ylabel('Number of Delivery Points')
-    ax.grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    plt.savefig('Regional_Distribution_Analysis.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    plt.savefig("Delivery_Points_Covered_by_Depot_Pair.png", dpi=300)
+    plt.close()
+
+def assign_nearest_depot_region(points: pd.DataFrame, depots: dict) -> pd.Series:
+    """
+    Assign each point to its nearest depot by haversine distance.
+    Returns a Series of depot keys (e.g., 'S','N','E','W','C').
+    """
+    depot_keys = list(depots.keys())
+    depot_lats = np.array([depots[k]['lat'] for k in depot_keys])
+    depot_lons = np.array([depots[k]['lon'] for k in depot_keys])
+
+    # vectorized nearest depot
+    lat = points['lat'].values
+    lon = points['lon'].values
+    # compute distances to all depots: shape (num_points, num_depots)
+    dists = np.stack([haversine_km(lat, lon, depot_lats[j], depot_lons[j]) for j in range(len(depot_keys))], axis=1)
+    nearest_idx = np.argmin(dists, axis=1)
+    return pd.Series([depot_keys[i] for i in nearest_idx], index=points.index)
 
 if __name__ == "__main__":
-    print("Starting Experiment 2: Multi-Depot Analysis")
-    print("="*50)
-    
-    try:
-        router = DivideConquerRouter(
-            graph_file="chicago_street_network.graphml",
-            distance_weight=0.3,
-            delivery_weight=0.7
-        )
-        
-        exp2_results = run_experiment_2(router)
-        if not exp2_results.empty:
-            print("✓ Experiment 2 completed! Results saved to experiment_2_results.csv")
-            print("Generating multi-depot analysis plots...")
-            create_multi_depot_plots(router, exp2_results)
-            print("✓ Multi-depot and regional distribution plots generated!")
-        
-        # Generate quad-tree visualization
-        print("Generating quad-tree visualization...")
-        sample_points = router.load_and_preprocess_points("delivery_points_100.csv")
-        regions = router.quad_tree_decomposition(sample_points, max_points_per_region=25)
-        router.visualize_quad_tree(sample_points, regions, "Enhanced_Quad-Tree_Decomposition")
-        print("✓ Quad-tree visualization generated!")
-        
-    except Exception as e:
-        print(f"Error occurred: {e}")
-        import traceback
-        traceback.print_exc()
-        print("Please check if the graph and delivery points files exist in the correct paths.")
+    print("Experiment 2 — Multi-Depot (Clean Path, No Budget)")
+    router = DivideConquerRouter("chicago_street_network.graphml", distance_weight=0.3, delivery_weight=0.7)
+
+    res = run_experiment_2(router)
+    if not res.empty:
+        create_multi_depot_plots(res)
+
+        # region distribution (nearest depot by distance; replaces missing get_region_for_point)
+        pts = router.load_and_preprocess_points("delivery_points_1000.csv")
+        pts['region'] = assign_nearest_depot_region(pts, router.depots)
+
+        counts = pts['region'].value_counts()
+        fig, ax = plt.subplots(figsize=(10,6))
+        labels = [router.depots[k]['name'] for k in counts.index]
+        colors = [router.depots[k]['color'] for k in counts.index]
+        bars = ax.bar(labels, counts.values, color=colors, alpha=.8)
+        for b in bars:
+            ax.text(b.get_x()+b.get_width()/2, b.get_height()+5, f"{int(b.get_height())}",
+                    ha='center', va='bottom', fontweight='bold')
+        ax.set_title("Delivery Points by Nearest Depot", fontweight='bold')
+        ax.grid(True, alpha=.3)
+        plt.tight_layout()
+        plt.savefig("Regional_Distribution_Analysis.png", dpi=300)
+        plt.close()
+
+        print("✓ Saved experiment_2_results.csv and plots.")
