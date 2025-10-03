@@ -6,6 +6,9 @@ delivery_points_200.csv
 delivery_points_300.csv
 delivery_points_500.csv
 delivery_points_1000.csv
+delivery_points_1000_equal.csv
+delivery_points_1000_high_majority.csv
+delivery_points_1000_low_majority.csv
 edges.csv
 nodes.csv
 ._pycache_/
