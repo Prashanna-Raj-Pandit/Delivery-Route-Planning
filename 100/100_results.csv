@@ -1,0 +1,4 @@
+dataset,regions,deliveries,visited,distance_km
+Folyd-Warshall.csv,16,100,50,158.65817300669605
+Nearest Neighbor.csv,12,100,33,89.50223946135576
+Quad-Tree Decomposition.csv,12,100,47,152.27020107081222

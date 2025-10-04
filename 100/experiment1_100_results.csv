@@ -1,0 +1,6 @@
+dataset,regions,deliveries,visited,distance_km
+delivery_points_100.csv,15,100,47,138.09837011962145
+delivery_points_dp.csv,12,100,47,152.27020107081222
+delivery_points_gre.csv,12,100,33,89.50223946135576
+delivery_points_1.csv,14,100,50,128.17777505317437
+delivery_points_2.csv,16,100,50,158.65817300669605

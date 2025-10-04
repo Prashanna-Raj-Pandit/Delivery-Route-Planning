@@ -124,4 +124,4 @@ def generate_delivery_points(sample_size=1000,distribution="equal"):
 
 
 if __name__ == "__main__":
-    generate_delivery_points(sample_size=500, distribution="equal")
+    generate_delivery_points(sample_size=100, distribution="equal")

@@ -1,4 +1,4 @@
-dataset,total_points,covered_points,covered_p1,covered_p2,covered_p3,distance_km,regions_selected,runtime_s
-Equal,1000,256,82,85,89,318.28856577805595,24,14.505101203918457
-HighMajority,1000,258,147,87,24,318.4426597223178,24,2.648548126220703
-LowMajority,1000,258,19,108,131,311.72967686274063,24,0.6660721302032471
+dataset,total_points,covered_points,covered_p1,covered_p2,covered_p3,distance_km,regions_selected,runtime_s,budget_mode,max_km_budget,corridor_km,num_slabs,top_k,W1,W2,W3,p1_ratio,p2_ratio,p3_ratio
+Equal,1000,729,229,252,248,882.6559103834882,74,175.59154391288757,none,,6.5,16,,49.02,33.33,17.65,0.334,0.333,0.333
+HighMajority,1000,533,306,163,64,617.8003928463722,54,2.1188879013061523,none,,4.0,18,3.0,48.17,33.89,17.94,0.6,0.3,0.1
+LowMajority,1000,909,91,358,460,1170.7275392757053,76,45.80891799926758,none,,9.0,14,,49.02,33.33,17.65,0.1,0.4,0.5
