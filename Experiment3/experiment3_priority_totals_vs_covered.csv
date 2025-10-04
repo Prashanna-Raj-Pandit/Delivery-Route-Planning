@@ -1,0 +1,4 @@
+dataset,total_overall,covered_total,total_P1,covered_P1,total_P2,covered_P2,total_P3,covered_P3
+Equal,1000,664,334,331,333,333,333,0
+HighMajority,1000,895,600,597,300,298,100,0
+LowMajority,1000,497,100,98,400,399,500,0
