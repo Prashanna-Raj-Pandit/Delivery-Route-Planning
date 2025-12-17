@@ -31,8 +31,8 @@ GRAPH_FILE = "chicago_street_network.graphml"
 
 DATASETS = {
     "Equal":        "delivery_points_1000_equal.csv",
-    "HighMajority": "delivery_points_1000_high_majority.csv",
-    "LowMajority":  "delivery_points_1000_low_majority.csv",
+    "HighMajority": "delivery_points_1000_high_dominance.csv",
+    "LowMajority":  "delivery_points_1000_low_dominance.csv",
 }
 
 MAX_POINTS_PER_REGION_DEFAULT = 22
