@@ -9,6 +9,8 @@ delivery_points_1000.csv
 delivery_points_1000_equal.csv
 delivery_points_1000_high_majority.csv
 delivery_points_1000_low_majority.csv
+delivery_points_1000_high_dominance.csv
+delivery_points_1000_low_dominance.csv
 edges.csv
 nodes.csv
 ._pycache_/
@@ -19,3 +21,5 @@ cache/
 .idea
 .vscode
 .DS_Store
+dataset/
+greedy/
